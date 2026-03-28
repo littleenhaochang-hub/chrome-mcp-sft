@@ -37,17 +37,15 @@ def execute_action(action_json: dict):
     
     print(f"[Browser] Executing: {method} {params}")
     
-    # Note: These are conceptual mappings to the OpenClaw CLI.
-    # In a real environment, you'd use the raw MCP JSON-RPC payload or exact CLI flags.
     if method == "click":
-        # Pseudo-command, assumes openclaw browser click <selector>
-        pass 
+        selector = params.get("selector", "")
+        run_cmd(f'openclaw browser --browser-profile user click "{selector}"')
     elif method == "type":
-        # Pseudo-command
-        pass
+        selector = params.get("selector", "")
+        text = params.get("text", "")
+        run_cmd(f'openclaw browser --browser-profile user type "{selector}" "{text}"')
     elif method == "scroll":
-        # Pseudo-command
-        pass
+        run_cmd('openclaw browser --browser-profile user scroll down')
     
     time.sleep(2) # Wait for network/rendering
 
@@ -140,11 +138,6 @@ def run_trajectory(task: str, url: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Collect Flight Search data via Chrome MCP")
     parser.add_argument("--task", type=str, default="Find the cheapest one-way flight from TPE to NRT on April 15th.", help="The natural language task")
-    parser.add_argument("--url", type=str, default="https://www.google.com/flights", help="Starting URL")
-    args = parser.parse_args()
-    
-    run_trajectory(args.task, args.url)
-", help="The natural language task")
     parser.add_argument("--url", type=str, default="https://www.google.com/flights", help="Starting URL")
     args = parser.parse_args()
     
