@@ -32,18 +32,23 @@ def get_dom_snapshot() -> str:
 
 def execute_action(action_json: dict):
     """Execute the parsed JSON action via OpenClaw Chrome MCP."""
+    import re
     method = action_json.get("method")
     params = action_json.get("params", {})
     
     print(f"[Browser] Executing: {method} {params}")
     
+    def extract_uid(sel: str) -> str:
+        match = re.search(r'(\d+_\d+)', sel)
+        return match.group(1) if match else sel
+
     if method == "click":
-        selector = params.get("selector", "")
-        run_cmd(f'openclaw browser --browser-profile user click "{selector}"')
+        uid = extract_uid(params.get("selector", ""))
+        run_cmd(f'openclaw browser --browser-profile user click "{uid}"')
     elif method == "type":
-        selector = params.get("selector", "")
+        uid = extract_uid(params.get("selector", ""))
         text = params.get("text", "")
-        run_cmd(f'openclaw browser --browser-profile user type "{selector}" "{text}"')
+        run_cmd(f'openclaw browser --browser-profile user type "{uid}" "{text}"')
     elif method == "scroll":
         run_cmd('openclaw browser --browser-profile user scroll down')
     
