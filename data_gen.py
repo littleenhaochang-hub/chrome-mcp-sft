@@ -100,7 +100,7 @@ def run_trajectory(task: str, url: str):
     time.sleep(3) # Wait for initial load
     
     dataset = []
-    max_steps = 1 # Test run to prevent infinite loops while actions are pseudo-code
+    max_steps = 15 # Allow enough steps to complete the flight search flow
     
     for step in range(max_steps):
         print(f"\n--- Step {step + 1} ---")
@@ -140,6 +140,11 @@ def run_trajectory(task: str, url: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Collect Flight Search data via Chrome MCP")
     parser.add_argument("--task", type=str, default="Find the cheapest one-way flight from TPE to NRT on April 15th.", help="The natural language task")
+    parser.add_argument("--url", type=str, default="https://www.google.com/flights", help="Starting URL")
+    args = parser.parse_args()
+    
+    run_trajectory(args.task, args.url)
+", help="The natural language task")
     parser.add_argument("--url", type=str, default="https://www.google.com/flights", help="Starting URL")
     args = parser.parse_args()
     
