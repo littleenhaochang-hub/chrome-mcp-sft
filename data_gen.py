@@ -1,5 +1,8 @@
 import json
 import time
+import os
+import urllib.request
+import urllib.error
 import subprocess
 import argparse
 
@@ -49,28 +52,44 @@ def execute_action(action_json: dict):
     time.sleep(2) # Wait for network/rendering
 
 def ask_oracle(task: str, minified_dom: str) -> dict:
-    """Ask Gemini 2.5 Flash (via OpenClaw/Gemini CLI) for the next action."""
+    """Ask Gemini 3.1 Pro via urllib for the next action."""
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("[Error] GEMINI_API_KEY environment variable not set.")
+        return {"method": "error", "params": {"msg": "No API key"}}
+        
     prompt = f"{SYSTEM_PROMPT}\n\nTASK: {task}\n\nCURRENT DOM:\n{minified_dom}\n\nNEXT ACTION (JSON ONLY):"
     
-    # We escape single quotes for the shell command
-    safe_prompt = prompt.replace("'", "'\\''")
-    # Calling the gemini CLI skill (assuming it's available in path or via openclaw)
-    # Using a fast model for the Oracle
-    cmd = f"openclaw gemini --model gemini-3.1-pro-preview '{safe_prompt}'"
-    print("[Oracle] Thinking...")
-    response = run_cmd(cmd)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.0}
+    }
     
-    # Clean markdown formatting if present
-    if "```json" in response:
-        response = response.split("```json")[1].split("```")[0].strip()
-    elif "```" in response:
-        response = response.split("```")[1].split("```")[0].strip()
-        
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers=headers)
+    
+    print("[Oracle] Thinking...")
     try:
-        return json.loads(response)
+        with urllib.request.urlopen(req) as res:
+            res_data = json.loads(res.read().decode("utf-8"))
+            response = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # Clean markdown formatting if present
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+                
+            return json.loads(response)
+    except urllib.error.HTTPError as e:
+        print(f"[Error] API request failed with status: {e.code}")
+        print(f"Response: {e.read().decode('utf-8')}")
+        return {"method": "error", "params": {"msg": "Oracle request failed"}}
     except Exception as e:
-        print(f"[Error] Failed to parse Oracle response as JSON: {response}")
-        return {"method": "error", "params": {"msg": "JSON parse failed"}}
+        print(f"[Error] Failed to ask Oracle or parse JSON: {e}")
+        return {"method": "error", "params": {"msg": "Oracle request failed"}}
 
 def run_trajectory(task: str, url: str):
     print(f"=== Starting Oracle Trajectory ===")
@@ -81,7 +100,7 @@ def run_trajectory(task: str, url: str):
     time.sleep(3) # Wait for initial load
     
     dataset = []
-    max_steps = 15
+    max_steps = 1 # Test run to prevent infinite loops while actions are pseudo-code
     
     for step in range(max_steps):
         print(f"\n--- Step {step + 1} ---")
